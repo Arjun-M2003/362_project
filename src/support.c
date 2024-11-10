@@ -204,58 +204,36 @@ void spi1_dma_display2(const char *str)
 }
 
 int score = 0;
+int temperature = 77;
+int humidity = 50;
+int max_range = 80;
 char disp1[17] = "                ";
 char disp2[17] = "                ";
 volatile int pos = 0;
+
 void TIM17_IRQHandler(void)
 {
     TIM17->SR &= ~TIM_SR_UIF;
-    memmove(disp1, &disp1[1], 16);
+    memmove(disp1, &disp1[1], 16); //remove memory?
     memmove(disp2, &disp2[1], 16);
-    if (pos == 0) {
-        if (disp1[0] != ' ')
-            score -= 1;
-        if (disp2[0] != ' ')
-            score += 1;
-        disp1[0] = '>';
-    } else {
-        if (disp2[0] != ' ')
-            score -= 1;
-        if (disp1[0] != ' ')
-            score += 1;
-        disp2[0] = '>';
-    }
-    int create = random() & 3;
-    if (create == 0) { // one in four chance
-        int line = random() & 1;
-        if (line == 0) { // pick a line
-            disp1[15] = 'x';
-            disp2[15] = ' ';
-        } else {
-            disp1[15] = ' ';
-            disp2[15] = 'x';
-        }
-    } else {
-        disp1[15] = ' ';
-        disp2[15] = ' ';
-    }
-    if (pos == 0)
-        disp1[0] = '>';
-    else
-        disp2[0] = '>';
-    if (score >= 100) {
-        print("Score100");
-        spi1_dma_display1("Game over");
-        spi1_dma_display2("You win");
+
+    if (temperature >= max_range) {
+        print("AboveMax");
+        spi1_dma_display1(" Turning on Fan ");
+        spi1_dma_display2(" Above max temp ");
+        //Oled line space "                "
         NVIC->ICER[0] = 1<<TIM17_IRQn;
         return;
     }
     char buf[9];
-    snprintf(buf, 9, "Score% 3d", score);
+    snprintf(buf, 9, "Standby");
     print(buf);
+    //get temperature and put to disp1
+    disp1[12] = temperature;
     spi1_dma_display1(disp1);
+    //get humidity and put to dips2
+    disp1[13] = humidity;
     spi1_dma_display2(disp2);
-    TIM17->ARR = 250 - 1 - 2*score;
 }
 
 void init_tim17(void)
