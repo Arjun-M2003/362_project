@@ -339,35 +339,6 @@ void spi1_enable_dma(void) {
     DMA1_Channel3->CCR |= DMA_CCR_EN; 
 }
 
-extern uint16_t display[34];
-void spi1_dma_display1(const char *str)
-{
-    for(int i=0; i<16; i++) {
-        if (str[i])
-            display[i+1] = 0x200 + str[i];
-        else {
-            // End of string.  Pad with spaces.
-            for(int j=i; j<16; j++)
-                display[j+1] = 0x200 + ' ';
-            break;
-        }
-    }
-}
-
-void spi1_dma_display2(const char *str)
-{
-    for(int i=0; i<16; i++) {
-        if (str[i])
-            display[i+18] = 0x200 + str[i];
-        else {
-            // End of string.  Pad with spaces.
-            for(int j=i; j<16; j++)
-                display[j+18] = 0x200 + ' ';
-            break;
-        }
-    }
-}
-
 //===========================================================================
 // Main function
 //===========================================================================
@@ -388,8 +359,45 @@ int main(void) {
     enable_ports();
     // setup keyboard
     init_tim7();
-    spi1_dma_display1("Game over");
-    spi1_dma_display2("You win");
+
+
     NVIC->ICER[0] = 1<<TIM17_IRQn;
+    print("temp 80F");
+    init_spi2();
+    spi2_setup_dma();
+    spi2_enable_dma();
+    //get data & add string "temperature ", temp, "F"
+    spi1_dma_display1("temperature 77F ");
+    //get data & add string "  humidity  ", humid, "%"
+    spi1_dma_display2("  humidity  26% ");
+    //Oled line space "                "
+    init_spi1();
+    spi1_init_oled();
+    spi1_setup_dma();
+    spi1_enable_dma();
     
+    init_tim17(); // start timer
+    get_keypress(); // Wait for key to start
+    // Then enable interrupt...
+    NVIC->ISER[0] = 1<<TIM17_IRQn;
+    for(;;) {
+        char key = get_keypress();
+        if (key == 'A' || key == 'B') {
+            // If the A or B key is pressed, disable interrupts while
+            // we update the display.
+            asm("cpsid i");
+            if (key == 'A') {
+                // pos = 0;
+                // disp1[0] = '>';
+                // disp2[0] = ' ';
+            } else {
+                // pos = 1;
+                // disp1[0] = ' ';
+                // disp2[0] = '>';
+            }
+            // spi1_dma_display1(disp1);
+            // spi1_dma_display2(disp2);
+            asm("cpsie i");
+        }
+    }
 }
