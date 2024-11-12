@@ -1,43 +1,18 @@
-//
-// !!! WARNING !!! AUTO-GENERATED FILE!
-// PLEASE DO NOT MODIFY IT AND USE "platformio.ini":
-// https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags
-//
 {
-    "configurations": [
-        {
-            "name": "PlatformIO",
-            "includePath": [
-                "/Users/hjcho/Desktop/ECE 36200/Project/362_project/include",
-                "/Users/hjcho/Desktop/ECE 36200/Project/362_project/src",
-                "/Users/hjcho/.platformio/packages/framework-cmsis/CMSIS/Include",
-                "/Users/hjcho/.platformio/packages/framework-cmsis-stm32f0/Include",
-                ""
-            ],
-            "browse": {
-                "limitSymbolsToIncludedHeaders": true,
-                "path": [
-                    "/Users/hjcho/Desktop/ECE 36200/Project/362_project/include",
-                    "/Users/hjcho/Desktop/ECE 36200/Project/362_project/src",
-                    "/Users/hjcho/.platformio/packages/framework-cmsis/CMSIS/Include",
-                    "/Users/hjcho/.platformio/packages/framework-cmsis-stm32f0/Include",
-                    ""
-                ]
-            },
-            "defines": [
-                "PLATFORMIO=60116",
-                "STM32F091xC",
-                "F_CPU=48000000L",
-                "STM32F091",
-                ""
-            ],
-            "compilerPath": "/Users/hjcho/.platformio/packages/toolchain-gccarmnoneeabi/bin/arm-none-eabi-gcc",
-            "compilerArgs": [
-                "-mthumb",
-                "-mcpu=cortex-m0",
-                ""
-            ]
-        }
-    ],
-    "version": 4
+  "configurations": [
+    {
+      "name": "macos-clang-arm64",
+      "includePath": [
+        "${workspaceFolder}/**"
+      ],
+      "compilerPath": "/usr/bin/clang",
+      "cStandard": "${default}",
+      "cppStandard": "${default}",
+      "intelliSenseMode": "macos-clang-arm64",
+      "compilerArgs": [
+        ""
+      ]
+    }
+  ],
+  "version": 4
 }
