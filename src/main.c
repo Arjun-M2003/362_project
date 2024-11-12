@@ -13,97 +13,6 @@ void set_char_msg(int, char);
 void nano_wait(unsigned int);
 void internal_clock();
 
-int main (void) {
-    internal_clock();
-    enable_ports();
-
-    msg[0] |= font['E'];
-    msg[1] |= font['C'];
-    msg[2] |= font['E'];
-    msg[3] |= font[' '];
-    msg[4] |= font['3'];
-    msg[5] |= font['6'];
-    msg[6] |= font['2'];
-    msg[7] |= font[' '];
-
-    // setup keyboard
-    init_tim7();
-    init_spi1();
-    spi1_init_oled();
-
-    spi1_display1("Temperature: 70F");
-    //spi1_display1(temp);
-    spi1_display2("Moisture: 0.8%   ");
-    //spi1_display2(moist);
-    
-    while (1) {
-        char key = get_keypress();
-        int sTemp = 66;
-        int eTemp = 76;
-        int sMoist = 0;
-        int eMoist = 2;
-        int temp = 72;
-        int moist = 1;
-
-        if (key == 'A') {
-            // When 'A' is pressed, display "Enter" on the OLED
-            spi1_display1("Enter Start of   ");
-            spi1_display2("Range for Temp:   ");
-            char sTemp1 = get_keypress();
-            small_delay();
-            char sTemp2 = get_keypress();
-            small_delay();
-            spi1_display1("Enter End of   ");
-            spi1_display2("Range for Temp:   ");
-            char eTemp1 = get_keypress();
-            small_delay();
-            char eTemp2 = get_keypress();
-            small_delay();
-            spi1_display1("Temperature: 70F");
-            //spi1_display1(temp);
-            spi1_display2("Moisture: 0.8%     ");
-            //spi1_display2(moist);
-        }
-        if (key == 'B') {
-            // When 'A' is pressed, display "Enter" on the OLED
-            spi1_display1("Enter Start of   ");
-            spi1_display2("Range for Moist:   ");
-            char sMoist1 = get_keypress();
-            small_delay();
-            char sMoist2 = get_keypress();
-            small_delay();
-            // Now wait for the '#' key to be pressed to display "End"
-            
-            spi1_display1("Enter End of   ");
-            spi1_display2("Range for Moist:   ");
-            char eMoist1 = get_keypress();
-            small_delay();
-            char eMoist2 = get_keypress();
-            small_delay();
-            spi1_display1("Temperature: 70F");
-            //spi1_display1(temp);
-            spi1_display2("Moisture: 0.8%   ");
-            //spi1_display2(moist);
-        }
-        if (temp < sTemp){
-            spi1_display1("      ERROR       ");
-            spi1_display2("  Temp Too Low!   ");
-        }
-        if (temp > eTemp){
-            spi1_display1("      ERROR       ");
-            spi1_display2("  Temp Too High!   ");
-        }
-        if (moist < sMoist){
-            spi1_display1("      ERROR       ");
-            spi1_display2("Moisture Too Low!   ");
-        }
-        if (moist > eMoist){
-            spi1_display1("      ERROR       ");
-            spi1_display2("Moisture Too High!   ");
-        }
-        
-    }
-}
 
 //===========================================================================
 // Configure GPIOB for Fan, Status LED, and Keypad
@@ -483,3 +392,94 @@ void spi1_enable_dma(void) {
 }
 
 
+int main (void) {
+    internal_clock();
+    enable_ports();
+
+    msg[0] |= font['E'];
+    msg[1] |= font['C'];
+    msg[2] |= font['E'];
+    msg[3] |= font[' '];
+    msg[4] |= font['3'];
+    msg[5] |= font['6'];
+    msg[6] |= font['2'];
+    msg[7] |= font[' '];
+
+    // setup keyboard
+    init_tim7();
+    init_spi1();
+    spi1_init_oled();
+
+    spi1_display1("Temperature: 70F");
+    //spi1_display1(temp);
+    spi1_display2("Moisture: 0.8%   ");
+    //spi1_display2(moist);
+    
+    while (1) {
+        char key = get_keypress();
+        int sTemp = 66;
+        int eTemp = 76;
+        int sMoist = 0;
+        int eMoist = 2;
+        int temp = 72;
+        int moist = 1;
+
+        if (key == 'A') {
+            // When 'A' is pressed, display "Enter" on the OLED
+            spi1_display1("Enter Start of   ");
+            spi1_display2("Range for Temp:   ");
+            char sTemp1 = get_keypress();
+            small_delay();
+            char sTemp2 = get_keypress();
+            small_delay();
+            spi1_display1("Enter End of   ");
+            spi1_display2("Range for Temp:   ");
+            char eTemp1 = get_keypress();
+            small_delay();
+            char eTemp2 = get_keypress();
+            small_delay();
+            spi1_display1("Temperature: 70F");
+            //spi1_display1(temp);
+            spi1_display2("Moisture: 0.8%     ");
+            //spi1_display2(moist);
+        }
+        if (key == 'B') {
+            // When 'A' is pressed, display "Enter" on the OLED
+            spi1_display1("Enter Start of   ");
+            spi1_display2("Range for Moist:   ");
+            char sMoist1 = get_keypress();
+            small_delay();
+            char sMoist2 = get_keypress();
+            small_delay();
+            // Now wait for the '#' key to be pressed to display "End"
+            
+            spi1_display1("Enter End of   ");
+            spi1_display2("Range for Moist:   ");
+            char eMoist1 = get_keypress();
+            small_delay();
+            char eMoist2 = get_keypress();
+            small_delay();
+            spi1_display1("Temperature: 70F");
+            //spi1_display1(temp);
+            spi1_display2("Moisture: 0.8%   ");
+            //spi1_display2(moist);
+        }
+        if (temp < sTemp){
+            spi1_display1("      ERROR       ");
+            spi1_display2("  Temp Too Low!   ");
+        }
+        if (temp > eTemp){
+            spi1_display1("      ERROR       ");
+            spi1_display2("  Temp Too High!   ");
+        }
+        if (moist < sMoist){
+            spi1_display1("      ERROR       ");
+            spi1_display2("Moisture Too Low!   ");
+        }
+        if (moist > eMoist){
+            spi1_display1("      ERROR       ");
+            spi1_display2("Moisture Too High!   ");
+        }
+        
+    }
+}
