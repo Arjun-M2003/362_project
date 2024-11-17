@@ -357,12 +357,6 @@ int main(void) {
     init_spi2();
     spi2_setup_dma();
     spi2_enable_dma();
-    //get data & add string "temperature ", temp, "F"
-    spi1_dma_display1("temperature 77F ");
-    //get data & add string "  humidity  ", humid, "%"
-    spi1_dma_display2("  humidity  26% ");
-    //Oled line space "                "
-    
     init_spi1();
     spi1_init_oled();
 
@@ -423,6 +417,7 @@ int main(void) {
         else if (temp > eTemp){
             spi1_display1("      ERROR       ");
             spi1_display2("  Temp Too High!   ");
+            //turn on led, fan
         }
         else if (moist < sMoist){
             spi1_display1("      ERROR       ");
@@ -431,7 +426,9 @@ int main(void) {
         else if (moist > eMoist){
             spi1_display1("      ERROR       ");
             spi1_display2("Moisture Too High!   ");
-        } else {
+            //turn on fan
+        } else { //no errors
+            //turn off fan & led
             sprintf(tempB, "Temperature:%3dF", temp);
             spi1_display1(tempB);
             sprintf(moistB, "   Moisture:%3d%%", moist);

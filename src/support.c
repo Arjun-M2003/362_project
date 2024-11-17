@@ -216,6 +216,7 @@ int getint(void)
         default: continue; // ABCD
         }
     }
+    clear_display();
     return num;
 }
 
