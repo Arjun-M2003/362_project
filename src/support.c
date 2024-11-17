@@ -3,11 +3,11 @@
 #include <stdlib.h> // for srandom() and random()
 #include <stdio.h>
 
-// void nano_wait(unsigned int n) {
-//     asm(    "        mov r0,%0\n"
-//             "repeat: sub r0,#83\n"
-//             "        bgt repeat\n" : : "r"(n) : "r0", "cc");
-// }
+void nano_wait(unsigned int n) {
+    asm(    "        mov r0,%0\n"
+            "repeat: sub r0,#83\n"
+            "        bgt repeat\n" : : "r"(n) : "r0", "cc");
+}
 
 const char font[] = {
     0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,

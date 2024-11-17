@@ -2,7 +2,6 @@
 // #include <stdio.h>
 
 void set_char_msg(int, char);
-void nano_wait(unsigned int);
 void internal_clock();
 
 //===========================================================================

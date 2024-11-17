@@ -58,6 +58,7 @@
   "C_Cpp_Runner.msvcSecureNoWarnings": false,
   "files.associations": {
     "commands.h": "c",
-    "string.h": "c"
+    "string.h": "c",
+    "stm32f0xx.h": "c"
   }
 }
