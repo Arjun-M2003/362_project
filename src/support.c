@@ -3,11 +3,11 @@
 #include <stdlib.h> // for srandom() and random()
 #include <stdio.h>
 
-void nano_wait(unsigned int n) {
-    asm(    "        mov r0,%0\n"
-            "repeat: sub r0,#83\n"
-            "        bgt repeat\n" : : "r"(n) : "r0", "cc");
-}
+// void nano_wait(unsigned int n) {
+//     asm(    "        mov r0,%0\n"
+//             "repeat: sub r0,#83\n"
+//             "        bgt repeat\n" : : "r"(n) : "r0", "cc");
+// }
 
 const char font[] = {
     0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
@@ -173,6 +173,52 @@ void dot()
 {
     msg[7] |= 0x80;
 }
+
+// Read an entire floating-point number.
+int getint(void)
+{
+    int num = 0;
+    int digits = 0;
+    int decimal = 0;
+    int enter = 0;
+    clear_display();
+    set_digit_segments(7, font['0']);
+    while(!enter) {
+        int key = get_keypress();
+        if (digits == 3) {
+            if (key != '#')
+                continue;
+        }
+        switch(key) {
+        case '0':
+            if (digits == 0)
+                continue;
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+            num = num*10 + key-'0';
+            decimal <<= 1;
+            digits += 1;
+            if (digits == 1)
+                set_digit_segments(7, font[key]);
+            else
+                append_segments(font[key]);
+            break;
+        case '#':
+            enter = 1;
+            break;
+        default: continue; // ABCD
+        }
+    }
+    return num;
+}
+
 
 extern uint16_t display[34];
 void spi1_dma_display1(const char *str)
