@@ -1,5 +1,7 @@
 #include "stm32f0xx.h"
 // #include <stdio.h>
+#define MINITERATIONS 100
+
 
 void set_char_msg(int, char);
 void internal_clock();
@@ -8,14 +10,27 @@ void internal_clock();
 // Configure GPIOC
 //===========================================================================
 void enable_ports(void) {
-    // Only enable port C for the keypad
+    //Enable port C for the keypad
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
     GPIOC->MODER &= ~0xffff;
-    GPIOC->MODER |= 0x55 << (4*2);
+    GPIOC->MODER |= 0x55 << (4*2);            
     GPIOC->OTYPER &= ~0xff;
     GPIOC->OTYPER |= 0xf0;
     GPIOC->PUPDR &= ~0xff;
     GPIOC->PUPDR |= 0x55;
+    
+    // Configure PB 8 to be output to turn on the fan
+    RCC -> AHBENR |= RCC_AHBENR_GPIOBEN;
+    GPIOB -> MODER &= ~GPIO_MODER_MODER8;
+    GPIOB -> MODER |= GPIO_MODER_MODER8_0;
+    // Now GPIOB ODR can be set to 0x0100 to turn on Fan at any point
+
+    // Set PA8, PA9, and PA10 for the status LED
+    RCC -> AHBENR |= RCC_AHBENR_GPIOAEN;
+    GPIOA -> MODER &= ~(GPIO_MODER_MODER8 | GPIO_MODER_MODER9 | GPIO_MODER_MODER10 | GPIO_MODER_MODER11);
+    GPIOA -> MODER |= GPIO_MODER_MODER8_1 | GPIO_MODER_MODER9_1 | GPIO_MODER_MODER10_1 | GPIO_MODER_MODER11_1;
+    GPIOA -> AFR[1] |= (0x2 << GPIO_AFRH_AFSEL8_Pos) | (0x2 << GPIO_AFRH_AFSEL9_Pos) | (0x2 << GPIO_AFRH_AFSEL10_Pos) |
+        (0x2 << GPIO_AFRH_AFSEL11_Pos);
 }
 
 
@@ -338,6 +353,70 @@ void spi1_enable_dma(void) {
     DMA1_Channel3->CCR |= DMA_CCR_EN; 
 }
 
+void setup_tim1(int ARR) {
+    RCC -> APB2ENR |= RCC_APB2ENR_TIM1EN;
+    /*RCC -> AHBENR |= RCC_AHBENR_GPIOAEN;
+    GPIOA -> MODER |= GPIO_MODER_MODER8_1 | GPIO_MODER_MODER9_1 | GPIO_MODER_MODER10_1 | GPIO_MODER_MODER11_1;
+    GPIOA -> AFR[1] |= (0x2 << GPIO_AFRH_AFSEL8_Pos) | (0x2 << GPIO_AFRH_AFSEL9_Pos) | (0x2 << GPIO_AFRH_AFSEL10_Pos) |
+        (0x2 << GPIO_AFRH_AFSEL11_Pos); */
+
+    TIM1 -> BDTR |= TIM_BDTR_MOE;
+    TIM1 -> PSC = 1 - 1;
+    TIM1 -> ARR = ARR - 1;
+    TIM1 -> CCMR1 |= TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC2M_1 | TIM_CCMR1_OC2M_2;
+    TIM1 -> CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2;
+
+    TIM1 -> CCMR2 |= TIM_CCMR2_OC4PE;
+    TIM1 -> CCER |= TIM_CCER_CC1E | TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
+    TIM1 -> CR1 |= TIM_CR1_CEN; // timer enable for PWM
+}
+
+uint8_t bcd2dec(uint8_t bcd) {
+    // Lower digit
+    uint8_t dec = bcd & 0xF;
+
+    // Higher digit
+    dec += 10 * (bcd >> 4);
+    return dec;
+}
+
+void setrgb(int rgb) {
+    uint8_t b = bcd2dec(rgb & 0xFF);
+    uint8_t g = bcd2dec((rgb >> 8) & 0xFF);
+    uint8_t r = bcd2dec((rgb >> 16) & 0xFF);
+
+    // Set rgb values
+    int arr = TIM1 -> ARR + 1;
+    TIM1 -> CCR1 = ((100 - r) * (arr)) / 100;
+    TIM1 -> CCR3 = ((100 - b) * (arr)) / 100;
+    TIM1 -> CCR2 = ((100 - g) * (arr)) / 100;
+}
+
+void fanOn(void) {
+    GPIOB -> ODR = 0x0100;
+}
+
+void fanOff(void) {
+    GPIOB -> ODR = 0x0000;
+}
+
+void ledGreen(void) {
+    TIM1 -> CR1 &= ~TIM_CR1_CEN; // disable timer to change ARR
+    TIM1 -> ARR = 4800; // very small period
+    int rgb = 0x00FF00;
+    setrgb(rgb);
+    TIM1 -> CR1 |= TIM_CR1_CEN; // reenable timer
+}
+
+void ledRed(void) {
+    TIM1 -> CR1 &= ~TIM_CR1_CEN; // disable timer to change ARR
+    TIM1 -> ARR = 9600000; // 0.5 sec
+    int rgb = 0xFF0000;
+    setrgb(rgb);
+    TIM1 -> CR1 |= TIM_CR1_CEN; // reenable timer
+}
+
+
 //===========================================================================
 // Main function
 //===========================================================================
@@ -345,15 +424,15 @@ void spi1_enable_dma(void) {
 int main(void) {
     internal_clock();
     enable_ports();
-
-    // GPIO enable
-    enable_ports();
+    setup_tim1(4800);
+    ledGreen();
+    
     // setup keyboard
     init_tim7();
 
+    int iterations = 0;
 
     NVIC->ICER[0] = 1<<TIM17_IRQn;
-    print("temp 80F");
     init_spi2();
     spi2_setup_dma();
     spi2_enable_dma();
@@ -372,6 +451,7 @@ int main(void) {
     spi1_display1(tempB);
     sprintf(moistB, "   Moisture:%3d%%", moist);
     spi1_display2(moistB);
+    
     while (1) {
         char key = get_keypress();
 
@@ -385,7 +465,7 @@ int main(void) {
                 sTemp = getint();
             }
             eTemp = 150;
-            while(eTemp >140){
+            while(eTemp >140 || eTemp <= sTemp){
                 spi1_display1("Enter End of   ");
                 spi1_display2("Range for Temp:   ");
                 small_delay();
@@ -394,46 +474,70 @@ int main(void) {
         }
         if (key == 'B') {
             // When 'B' is pressed, display "Enter" on the OLED
-            spi1_display1("Enter Start of   ");
-            spi1_display2("Range for Moist:   ");
-            sMoist = getint();
-            small_delay();
+            sMoist = 101;
+            eMoist = 101;
+            while(sMoist > 99){
+                spi1_display1("Enter Start of   ");
+                spi1_display2("Range for Moist:   ");
+                sMoist = getint();
+                small_delay();
+            }
             // Now wait for the '#' key to be pressed to display "End"
-            spi1_display1("Enter End of   ");
-            spi1_display2("Range for Moist:   ");
-            eMoist = getint();
-            small_delay();
+            while(eMoist > 100 || eMoist <= sMoist){
+                spi1_display1("Enter End of   ");
+                spi1_display2("Range for Moist:   ");
+                eMoist = getint();
+                small_delay();
+            }
         }
         if (key == 'C') { //Display status
             sprintf(tempB, "Temperature:%3dF", temp);
             spi1_display1(tempB);
             sprintf(moistB, "   Moisture:%3d%%", moist);
             spi1_display2(moistB);
+            if((eTemp < temp) && (iterations >= MINITERATIONS)){
+                fanOn();
+                ledRed();
+            } else {
+                fanOff();
+            }
+            if((sTemp > temp || eMoist < moist || sMoist > moist) && iterations >= MINITERATIONS){
+                ledRed();
+            } else {
+                ledGreen();
+            }
+
         }
         else if (temp < sTemp){
             spi1_display1("      ERROR       ");
             spi1_display2("  Temp Too Low!   ");
+            ledRed();
         }
         else if (temp > eTemp){
             spi1_display1("      ERROR       ");
             spi1_display2("  Temp Too High!   ");
+            ledRed();
             //turn on led, fan
         }
         else if (moist < sMoist){
             spi1_display1("      ERROR       ");
             spi1_display2("Moisture Too Low!   ");
+            ledRed();
         }
         else if (moist > eMoist){
             spi1_display1("      ERROR       ");
             spi1_display2("Moisture Too High!   ");
+            ledRed();
             //turn on fan
         } else { //no errors
             //turn off fan & led
+            ledGreen();
             sprintf(tempB, "Temperature:%3dF", temp);
             spi1_display1(tempB);
             sprintf(moistB, "   Moisture:%3d%%", moist);
             spi1_display2(moistB);
         }
-        
+    
+        iterations++;    
     }
 }

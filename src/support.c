@@ -1,6 +1,5 @@
 #include "stm32f0xx.h"
 #include <string.h> // for memmove()
-#include <stdlib.h> // for srandom() and random()
 #include <stdio.h>
 
 void nano_wait(unsigned int n) {
@@ -301,44 +300,3 @@ void spi1_init_oled(void);
 void spi1_setup_dma(void);
 void spi1_enable_dma(void);
 
-void game(void)
-{
-    print("Score  0");
-    init_spi2();
-    spi2_setup_dma();
-    spi2_enable_dma();
-    spi1_dma_display1("Hit key to play");
-    spi1_dma_display2("Hit A/B to move");
-    init_spi1();
-    spi1_init_oled();
-    spi1_setup_dma();
-    spi1_enable_dma();
-    init_tim17(); // start timer
-    get_keypress(); // Wait for key to start
-    spi1_dma_display1(">               ");
-    spi1_dma_display2("                ");
-    // Use the timer counter as random seed...
-    srandom(TIM17->CNT);
-    // Then enable interrupt...
-    NVIC->ISER[0] = 1<<TIM17_IRQn;
-    for(;;) {
-        char key = get_keypress();
-        if (key == 'A' || key == 'B') {
-            // If the A or B key is pressed, disable interrupts while
-            // we update the display.
-            asm("cpsid i");
-            if (key == 'A') {
-                pos = 0;
-                disp1[0] = '>';
-                disp2[0] = ' ';
-            } else {
-                pos = 1;
-                disp1[0] = ' ';
-                disp2[0] = '>';
-            }
-            spi1_dma_display1(disp1);
-            spi1_dma_display2(disp2);
-            asm("cpsie i");
-        }
-    }
-}
