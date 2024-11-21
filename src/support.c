@@ -3,11 +3,15 @@
 #include <stdlib.h> // for srandom() and random()
 #include <stdio.h>
 
-void nano_wait(unsigned int n) {
+void clear_display(void);
+char get_keypress();
+void append_segments(char val);
+
+/*void nano_wait(unsigned int n) {
     asm(    "        mov r0,%0\n"
             "repeat: sub r0,#83\n"
             "        bgt repeat\n" : : "r"(n) : "r0", "cc");
-}
+} */
 
 const char font[] = {
     0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
@@ -52,6 +56,52 @@ extern uint16_t msg[8];
 
 void set_digit_segments(int digit, char val) {
     msg[digit] = (digit << 8) | val;
+}
+
+// Read an entire floating-point number.
+int getint(void)
+{
+    int num = 0;
+    int digits = 0;
+    int decimal = 0;
+    int enter = 0;
+    clear_display();
+    set_digit_segments(7, font['0']);
+    while(!enter) {
+        int key = get_keypress();
+        if (digits == 3) {
+            if (key != '#')
+                continue;
+        }
+        switch(key) {
+        case '0':
+            if (digits == 0)
+                continue;
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+            num = num*10 + key-'0';
+            decimal <<= 1;
+            digits += 1;
+            if (digits == 1)
+                set_digit_segments(7, font[key]);
+            else
+                append_segments(font[key]);
+            break;
+        case '#':
+            enter = 1;
+            break;
+        default: continue; // ABCD
+        }
+    }
+    clear_display();
+    return num;
 }
 
 void print(const char str[])
@@ -137,12 +187,10 @@ int read_rows()
 }
 
 char get_key_event(void) {
-    for(;;) {
-        asm volatile ("wfi");   // wait for an interrupt
-        if (queue[qout] != 0)
-            break;
-    }
-    return pop_queue();
+    if (queue[qout] != 0)
+        return pop_queue();
+    else
+        return 0; // NULL
 }
 
 char get_keypress() {
@@ -272,11 +320,11 @@ void init_spi2(void);
 void spi2_setup_dma(void);
 void spi2_enable_dma(void);
 void init_spi1(void);
-void spi1_init_oled(void);
+//void spi1_init_oled(void);
 void spi1_setup_dma(void);
 void spi1_enable_dma(void);
 
-void game(void)
+/*void game(void)
 {
     print("Score  0");
     init_spi2();
@@ -316,4 +364,4 @@ void game(void)
             asm("cpsie i");
         }
     }
-}
+} */
