@@ -53,10 +53,10 @@ float upperTemp;
 float lowerTemp;
 float upperMoisture;
 float lowerMoisture;
-int sTemp = 66;
-int eTemp = 76;
+int sTemp = 60;
+int eTemp = 80;
 int sMoist = 0;
-int eMoist = 20;
+int eMoist = 8;
 
 int IRQTimer = 0;
 
@@ -486,6 +486,7 @@ void TIM2_IRQHandler() {
         spi1_display1("      ERROR       ");
         spi1_display2("  Temp Too Low!   ");
         ledRed();
+        fanOff();
         status = 0;
     }
     else if (temp > eTemp){
@@ -514,6 +515,7 @@ void TIM2_IRQHandler() {
         spi1_display1(tempB);
         sprintf(moistB, "   Moisture:%3d%%", moist);
         spi1_display2(moistB);
+        fanOff();
         status = 1;
         IRQTimer--;
     }
