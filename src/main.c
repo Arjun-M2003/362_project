@@ -159,26 +159,6 @@ int main (void) {
             status = 1;
         }
 
-        /*
-        if ((temp > eTemp || temp < sTemp || moist > eMoist || moist < sMoist))
-        {
-            status = 0;
-            ledRed();
-            if (temp > eTemp)
-                fanOn();
-            else
-                fanOff();
-
-            // reset iterations when LED is changed
-            iterations = 0;
-        } else
-        {
-            ledGreen();
-            fanOff();
-            status = 1;
-        } */
-
-        // output to OLED here
         iterations++;
     }
 }
@@ -193,12 +173,11 @@ void fanOff(void) {
 
 void ledGreen(void) {
     TIM1 -> CR1 &= ~TIM_CR1_CEN; // disable timer to change ARR
+
+    // Turn on Green always
     TIM1 -> CCR1 = TIM1 -> ARR;
     TIM1 -> CCR2 = 0;
     TIM1 -> CCR3 = TIM1 -> ARR;
-    //TIM1 -> ARR = ; // very small period
-    //int rgb = 0x00FF00;
-    //setrgb(rgb);
     TIM1 -> CR1 |= TIM_CR1_CEN; // reenable timer
 }
 
@@ -207,16 +186,13 @@ void ledRed(void) {
     TIM1 -> CR1 &= ~TIM_CR1_CEN; // disable timer to change ARR
     TIM1 -> CCR3 = TIM1 -> ARR;
     TIM1 -> CCR2 = TIM1 -> ARR;
+
+    // Red is on 50% duty cycle (50% * 1hz = 0.5 seconds on and off)
     TIM1 -> CCR1 = 1200;
-    //TIM1 -> ARR = 9600000; // 0.5 sec
-    //int rgb = 0xFF0000;
-    //setrgb(rgb);
     TIM1 -> CR1 |= TIM_CR1_CEN; // reenable timer
 }
 
-//===========================================================================
-// Configure GPIOB for Fan, Status LED, and Keypad
-//===========================================================================
+// GPIO Setup for keypad, fan, and status LED
 void enable_ports(void) {
     //Enable port C for the keypad
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
@@ -241,12 +217,9 @@ void enable_ports(void) {
         (0x2 << GPIO_AFRH_AFSEL11_Pos);
 }
 
+// Advanced Timer 1 for PWM Output on Channels 1-3 with 1hz
 void setup_tim1(int ARR) {
     RCC -> APB2ENR |= RCC_APB2ENR_TIM1EN;
-    /*RCC -> AHBENR |= RCC_AHBENR_GPIOAEN;
-    GPIOA -> MODER |= GPIO_MODER_MODER8_1 | GPIO_MODER_MODER9_1 | GPIO_MODER_MODER10_1 | GPIO_MODER_MODER11_1;
-    GPIOA -> AFR[1] |= (0x2 << GPIO_AFRH_AFSEL8_Pos) | (0x2 << GPIO_AFRH_AFSEL9_Pos) | (0x2 << GPIO_AFRH_AFSEL10_Pos) |
-        (0x2 << GPIO_AFRH_AFSEL11_Pos); */
 
     TIM1 -> BDTR |= TIM_BDTR_MOE;
     TIM1 -> PSC = 20000 - 1;
@@ -260,8 +233,8 @@ void setup_tim1(int ARR) {
     TIM1 -> CR1 |= TIM_CR1_CEN; // timer enable for PWM
 }
 
+// read the response from the plant monitor
 void readMonitor(char* buff) {
-    //while (!(USART5->ISR & USART_ISR_RXNE));
     int i = 0;
     char c;
     
@@ -281,6 +254,7 @@ void readMonitor(char* buff) {
     buff[i] = '\0';
 }
 
+// Send request to the plant monitor
 int sendChar(int c) {
     while(!(USART5->ISR & USART_ISR_TXE));
     USART5->TDR = c;
@@ -305,7 +279,7 @@ int readTemperature()
             break;
     }
     int celsius = atoi(buff + 2);
-    return celsius * 1.8 + 32;
+    return celsius * 1.8 + 32; // celsius to fahrenheit
 }
 
 int readMoisture()
@@ -316,6 +290,7 @@ int readMoisture()
     return atoi(buff + 2);
 }
 
+// Initialize UART to communicate with plant monitor at baud rate 9600
 void init_usart5() {
     RCC -> AHBENR |= RCC_AHBENR_GPIOCEN;
     RCC -> AHBENR |= RCC_AHBENR_GPIODEN;
@@ -346,16 +321,10 @@ void init_usart5() {
 
 uint8_t col; // the column being scanned
 
-//===========================================================================
-// Bit Bang SPI LED Array
-//===========================================================================
 int msg_index = 0;
 uint16_t msg[8] = { 0x0000,0x0100,0x0200,0x0300,0x0400,0x0500,0x0600,0x0700 };
 extern const char font[];
 
-//===========================================================================
-// Configure PB12 (CS), PB13 (SCK), and PB15 (SDI) for outputs
-//===========================================================================
 void setup_bb(void) {
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
     GPIOB->MODER &= 0x00ffffff;
@@ -371,10 +340,6 @@ void small_delay(void) {
     nano_wait(50000);
 }
 
-//===========================================================================
-// Set the MOSI bit, then set the clock high and low.
-// Pause between doing these steps with small_delay().
-//===========================================================================
 void bb_write_bit(int val) {
     // CS (PB12)
     // SCK (PB13)
@@ -392,11 +357,9 @@ void bb_write_bit(int val) {
     GPIOB->BSRR |= 1 << 13;
 }
 
-//===========================================================================
 // Set CS (PB12) low,
 // write 16 bits using bb_write_bit,
 // then set CS high.
-//===========================================================================
 void bb_write_halfword(int halfword) {
     GPIOB->BRR = 1 << 12;
 
@@ -410,9 +373,6 @@ void bb_write_halfword(int halfword) {
     GPIOB->BSRR |= 1 << 12;
 }
 
-//===========================================================================
-// Continually bitbang the msg[] array.
-//===========================================================================
 void drive_bb(void) {
     for(;;)
         for(int d=0; d<8; d++) {
@@ -421,11 +381,6 @@ void drive_bb(void) {
         }
 }
 
-//============================================================================
-// Configure Timer 15 for an update rate of 1 kHz.
-// Trigger the DMA channel on each update.
-// Copy this from lab 4 or lab 5.
-//============================================================================
 void init_tim15(void) {
   //Enable RCC clock for TIM15
   RCC->APB2ENR |= RCC_APB2ENR_TIM15EN;
@@ -442,12 +397,7 @@ void init_tim15(void) {
 
 }
 
-
-//===========================================================================
-// Configure timer 7 to invoke the update interrupt at 1kHz
-// Copy from lab 4 or 5.
-//===========================================================================
-
+// Timer 2 for temperature update at 1hz through interrupt
 void init_tim2(void){
     RCC -> APB1ENR |= RCC_APB1ENR_TIM2EN;
 
@@ -466,15 +416,7 @@ void TIM2_IRQHandler() {
 
     temp = readTemperature();
     moist = readMoisture();
-    /*if (status)
-    {
-        char tempB[32];
-        char moistB[32];
-        sprintf(tempB, "Temperature:%3dF", temp);
-        spi1_display1(tempB);
-        sprintf(moistB, "   Moisture:%3d%%", moist);
-        spi1_display2(moistB);
-    } */
+
     char tempB[32];
     char moistB[32];
     if (!status)
@@ -521,6 +463,8 @@ void TIM2_IRQHandler() {
     }
 }
 
+
+// Timer 7 for reading the keypad inputs, interrupt at 1kHz
 void init_tim7(void) {
     //Enable RCC clock for TIM7
     RCC->APB1ENR |= RCC_APB1ENR_TIM7EN;
@@ -539,10 +483,6 @@ void init_tim7(void) {
     TIM7->CR1 |= TIM_CR1_CEN;
 }
 
-//===========================================================================
-// Copy the Timer 7 ISR from lab 5
-//===========================================================================
-// TODO To be copied
 void TIM7_IRQHandler() {
     //Acknowledge the interrupt
     TIM7->SR &= ~TIM_SR_UIF;
@@ -558,22 +498,9 @@ void TIM7_IRQHandler() {
 
     //Drive new column
     drive_column(col);
-    /*temp = readTemperature();
-    moist = readMoisture();
-    if (status && iterations > MINITERATIONS)
-    {
-        char tempB[32];
-        char moistB[32];
-        sprintf(tempB, "Temperature:%3dF", temp);
-        spi1_display1(tempB);
-        sprintf(moistB, "   Moisture:%3d%%", moist);
-        spi1_display2(moistB);
-    } */
 }
 
-//===========================================================================
 // Initialize the SPI2 peripheral.
-//===========================================================================
 void init_spi2(void) {
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
     GPIOB->MODER &= 0x00ffffff;
@@ -597,10 +524,8 @@ void init_spi2(void) {
     SPI2->CR1 |= SPI_CR1_SPE;
 }
 
-//===========================================================================
 // Configure the SPI2 peripheral to trigger the DMA channel when the
-// transmitter is empty.  Use the code from setup_dma from lab 5.
-//===========================================================================
+// transmitter is empty.
 void spi2_setup_dma(void) {
     //setup_dma from lab 5
     RCC->AHBENR |= RCC_AHBENR_DMA1EN;
@@ -615,17 +540,11 @@ void spi2_setup_dma(void) {
                         | DMA_CCR_CIRC; //channel for CIRCular operation
 }
 
-//===========================================================================
-// Enable the DMA channel.
-//===========================================================================
 void spi2_enable_dma(void) {
     //enable_dma from lab 5
     DMA1_Channel5->CCR |= DMA_CCR_EN; 
 }
 
-//===========================================================================
-// 4.4 SPI OLED Display
-//===========================================================================
 void init_spi1() {
     RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
     GPIOA->MODER &= 0x3fff33ff;
@@ -655,10 +574,12 @@ void spi_cmd(unsigned int data) {
     // copy data to SPI1 data register
     SPI1->DR = data;
 }
+
 void spi_data(unsigned int data) {
     // calls spi_cmd with (data | 0x200)
     spi_cmd(data|0x200);
 }
+
 void spi1_init_oled() {
     // wait 1 ms using nano_wait
     nano_wait(1000000);
